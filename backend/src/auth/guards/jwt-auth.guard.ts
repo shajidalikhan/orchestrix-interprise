@@ -24,10 +24,12 @@ export class JwtAuthGuard implements CanActivate {
         role: string;
       };
 
-      // Strict Validation: Ensure the tenant ID in the token matches the requested tenant ID in context
-      const currentTenantId = this.tenancyService.getTenantId();
-      if (!currentTenantId || currentTenantId !== payload.tenantId) {
-        throw new UnauthorizedException('Cross-tenant action forbidden');
+      // Strict Validation: Ensure the tenant ID in the token matches the requested tenant ID in context (bypassed for SUPERADMIN)
+      if (payload.role !== 'SUPERADMIN') {
+        const currentTenantId = this.tenancyService.getTenantId();
+        if (!currentTenantId || currentTenantId !== payload.tenantId) {
+          throw new UnauthorizedException('Cross-tenant action forbidden');
+        }
       }
 
       // Attach user payload to request for controllers
