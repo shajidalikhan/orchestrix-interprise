@@ -186,6 +186,7 @@ export default function SuperadminPortal() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
                   required
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -197,6 +198,7 @@ export default function SuperadminPortal() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
                   required
+                  suppressHydrationWarning
                 />
               </div>
 
