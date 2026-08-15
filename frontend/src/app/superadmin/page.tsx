@@ -89,10 +89,10 @@ export default function SuperadminPortal() {
       }
       
       // Persist credentials on successful login
-      localStorage.setItem('orchestrix_token', data.accessToken);
+      localStorage.setItem('orchestrix_token', data.tokens.accessToken);
       localStorage.setItem('orchestrix_tenant', '');
 
-      setToken(data.accessToken);
+      setToken(data.tokens.accessToken);
       setMessage('Successfully authenticated as Superuser!');
     } catch (err: any) {
       setLoginError(err.message);

@@ -131,10 +131,10 @@ export default function WelcomeHub() {
       }
 
       // Save credentials in local storage
-      localStorage.setItem('orchestrix_token', data.accessToken);
+      localStorage.setItem('orchestrix_token', data.tokens.accessToken);
       localStorage.setItem('orchestrix_tenant', tenantKeyInput.trim() || '');
 
-      setToken(data.accessToken);
+      setToken(data.tokens.accessToken);
       setCurrentUser(data.user);
       setFeedback(`Authenticated successfully as ${data.user.role}!`);
 
