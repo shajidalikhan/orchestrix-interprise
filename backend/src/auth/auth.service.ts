@@ -94,14 +94,22 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
+    let user;
     const tenantId = this.tenancyService.getTenantId();
-    if (!tenantId) {
-      throw new BadRequestException('Tenant context is missing');
-    }
 
-    const user = await this.prisma.user.findFirst({
-      where: { email: email.toLowerCase(), tenantId },
-    });
+    if (!tenantId) {
+      // Check if it is a global SUPERADMIN login bypassing tenant-specific boundaries
+      user = await this.prisma.user.findFirst({
+        where: { email: email.toLowerCase(), role: 'SUPERADMIN' },
+      });
+      if (!user) {
+        throw new BadRequestException('Tenant context is missing');
+      }
+    } else {
+      user = await this.prisma.user.findFirst({
+        where: { email: email.toLowerCase(), tenantId },
+      });
+    }
 
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');
@@ -114,11 +122,11 @@ export class AuthService {
 
     return {
       user: { id: user.id, email: user.email, role: user.role },
-      tokens: this.generateTokens(user.id, tenantId, user.role),
+      tokens: this.generateTokens(user.id, user.tenantId, user.role),
     };
   }
 
-  private generateTokens(userId: string, tenantId: string, role: string) {
+  private generateTokens(userId: string, tenantId: string | null, role: string) {
     const accessToken = jwt.sign(
       { sub: userId, tenantId, role },
       this.jwtSecret,
