@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orchestrix-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: orchestrix
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: orchestrix-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:

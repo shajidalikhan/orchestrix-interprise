@@ -1,0 +1,237 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  CLOSED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+  FAILED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TaskPermissionType {
+  EXECUTE
+  BREAKDOWN
+  DELEGATE
+}
+
+model Tenant {
+  id                  String        @id @default(uuid())
+  name                String
+  domain              String?       @unique
+  stripeCustomerId    String?       @map("stripe_customer_id")
+  subscriptionStatus  String?       @map("subscription_status")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  users               User[]
+  projects            Project[]
+  tasks               Task[]
+  evaluations         Evaluation[]
+  freelancerTests     FreelancerTest[]
+  webhooks            WebhookSubscription[]
+  auditLogs           AuditLog[]
+  deviceTokens        DeviceToken[]
+  apiKeys             ApiKey[]
+
+  @@map("tenants")
+}
+
+model User {
+  id              String        @id @default(uuid())
+  tenantId        String        @map("tenant_id")
+  email           String
+  passwordHash    String?       @map("password_hash")
+  ssoProvider     String?       @map("sso_provider")
+  ssoId           String?       @map("sso_id")
+  role            String        @default("MEMBER") // ADMIN, MANAGER, MEMBER, FREELANCER
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  taskPermissions TaskPermission[]
+  deviceTokens    DeviceToken[]
+  auditLogs       AuditLog[]
+
+  // Task assignments and evaluations
+  assignedTasks   Task[]        @relation("TaskAssignee")
+  evaluatedTasks  Task[]        @relation("TaskEvaluator")
+  evaluations     Evaluation[]
+
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+model Project {
+  id              String             @id @default(uuid())
+  tenantId        String             @map("tenant_id")
+  name            String
+  status          ProjectStatus      @default(DRAFT)
+  matrixConfig    Json?              @map("matrix_config") // Defines evaluation criteria and weights
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tasks           Task[]
+  freelancerTests FreelancerTest[]
+
+  @@map("projects")
+}
+
+model Task {
+  id                   String        @id @default(uuid())
+  tenantId             String        @map("tenant_id")
+  projectId            String        @map("project_id")
+  parentId             String?       @map("parent_id")
+  title                String
+  description          String?
+  status               TaskStatus    @default(PENDING)
+  priority             TaskPriority  @default(MEDIUM)
+  deadline             DateTime?
+  progress             Float         @default(0.0) // progress rollup percentage (0 to 100)
+  
+  // Verification Endpoint Settings
+  verificationEndpoint String?       @map("verification_endpoint")
+  verificationMethod   String?       @map("verification_method") // GET or POST
+  verificationPayload  Json?         @map("verification_payload") // JSON rules to validate
+  
+  assigneeId           String?       @map("assignee_id")
+  evaluatorId          String?       @map("evaluator_id")
+  
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  tenant               Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project              Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  parent               Task?         @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks             Task[]        @relation("TaskSubtasks")
+  
+  assignee             User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  evaluator            User?         @relation("TaskEvaluator", fields: [evaluatorId], references: [id], onDelete: SetNull)
+  
+  permissions          TaskPermission[]
+  evaluations          Evaluation[]
+
+  @@map("tasks")
+}
+
+model TaskPermission {
+  id             String             @id @default(uuid())
+  taskId         String             @map("task_id")
+  userId         String             @map("user_id")
+  permission     TaskPermissionType @default(EXECUTE)
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  task           Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@map("task_permissions")
+}
+
+model Evaluation {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  taskId         String        @map("task_id")
+  evaluatorId    String        @map("evaluator_id")
+  scores         Json          // Dynamic scores matching project metrics
+  remarks        String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  task           Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  evaluator      User          @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
+}
+
+model FreelancerTest {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  projectId      String        @map("project_id")
+  testSchema     Json          @map("test_schema") // MCQs, instructions
+  passingScore   Float         @map("passing_score")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("freelancer_tests")
+}
+
+model WebhookSubscription {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  targetUrl      String        @map("target_url")
+  events         String[]      // e.g., ["task.completed", "task.created"]
+  secretToken    String        @map("secret_token")
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_subscriptions")
+}
+
+model DeviceToken {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  userId         String        @map("user_id")
+  token          String        @unique
+  platform       String        // ios, android, web
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("device_tokens")
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  tenantId       String        @map("tenant_id")
+  userId         String        @map("user_id")
+  action         String
+  payload        Json?
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  name      String
+  keyHash   String   @unique @map("key_hash")
+  scopes    String[] // e.g. ["read:tasks"]
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+

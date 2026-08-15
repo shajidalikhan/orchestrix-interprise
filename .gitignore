@@ -1,0 +1,27 @@
+# IDE and AI agent config directories
+.agents/
+.claude/
+.windsurf/
+CLAUDE.md
+AGENTS.md
+backend/.agents/
+backend/.claude/
+backend/.windsurf/
+frontend/CLAUDE.md
+frontend/AGENTS.md
+
+# Local build artifacts
+backend/dist/
+frontend/.next/
+frontend/out/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# System Files
+.DS_Store
+Thumbs.db
