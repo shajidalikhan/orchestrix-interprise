@@ -87,6 +87,28 @@ export default function WelcomeHub() {
   const [chatLogs, setChatLogs] = useState<{ sender: 'user' | 'bot'; text: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
 
+  // On page mount, restore token and check user profile
+  useEffect(() => {
+    const savedToken = localStorage.getItem('orchestrix_token');
+    const savedTenant = localStorage.getItem('orchestrix_tenant');
+    if (savedToken) {
+      setToken(savedToken);
+      if (savedTenant) setTenantKeyInput(savedTenant);
+      
+      fetch('http://localhost:3000/auth/me', {
+        headers: { 'Authorization': `Bearer ${savedToken}` }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Session expired');
+        return res.json();
+      })
+      .then(user => {
+        setCurrentUser(user);
+      })
+      .catch(() => handleSignOut());
+    }
+  }, []);
+
   // Handle Login Request
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,9 +130,20 @@ export default function WelcomeHub() {
         throw new Error(data.message || 'Login failed');
       }
 
+      // Save credentials in local storage
+      localStorage.setItem('orchestrix_token', data.accessToken);
+      localStorage.setItem('orchestrix_tenant', tenantKeyInput.trim() || '');
+
       setToken(data.accessToken);
       setCurrentUser(data.user);
       setFeedback(`Authenticated successfully as ${data.user.role}!`);
+
+      // Dynamic redirects based on credentials permission
+      if (data.user.role === 'SUPERADMIN') {
+        window.location.href = '/superadmin';
+      } else if (['ADMIN', 'MANAGER'].includes(data.user.role)) {
+        window.location.href = '/projects';
+      }
     } catch (err: any) {
       setFeedback(err.message || 'Error connecting to auth service.');
     }
@@ -118,6 +151,8 @@ export default function WelcomeHub() {
 
   // Sign out
   const handleSignOut = () => {
+    localStorage.removeItem('orchestrix_token');
+    localStorage.removeItem('orchestrix_tenant');
     setToken('');
     setCurrentUser(null);
     setEmail('');
@@ -401,6 +436,34 @@ export default function WelcomeHub() {
           </div>
           {currentUser && (
             <div className="flex items-center gap-4 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shadow">
+              <div className="flex gap-2">
+                {currentUser?.role === 'SUPERADMIN' ? (
+                  <button
+                    onClick={() => window.location.href = '/superadmin'}
+                    className="bg-indigo-950 text-indigo-400 hover:bg-indigo-900 border border-indigo-800 text-[10px] px-2.5 py-1 rounded font-bold transition-all"
+                  >
+                    Console
+                  </button>
+                ) : (
+                  ['ADMIN', 'MANAGER'].includes(currentUser?.role || '') && (
+                    <>
+                      <button
+                        onClick={() => window.location.href = '/projects'}
+                        className="bg-indigo-950 text-indigo-400 hover:bg-indigo-900 border border-indigo-800 text-[10px] px-2.5 py-1 rounded font-bold transition-all"
+                      >
+                        Projects
+                      </button>
+                      <button
+                        onClick={() => window.location.href = '/company'}
+                        className="bg-emerald-950 text-emerald-400 hover:bg-emerald-900 border border-emerald-800 text-[10px] px-2.5 py-1 rounded font-bold transition-all"
+                      >
+                        Company
+                      </button>
+                    </>
+                  )
+                )}
+              </div>
+
               <div className="flex flex-col text-right">
                 <span className="text-xs font-bold text-slate-200">{currentUser?.email}</span>
                 <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">{currentUser?.role}</span>
