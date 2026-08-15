@@ -38,8 +38,12 @@ export default function CompanySettingsPortal() {
   useEffect(() => {
     const savedToken = localStorage.getItem('orchestrix_token');
     const savedTenant = localStorage.getItem('orchestrix_tenant');
-    if (savedToken) setToken(savedToken);
-    if (savedTenant) setTenantId(savedTenant);
+    if (savedToken) {
+      setToken(savedToken);
+      if (savedTenant) setTenantId(savedTenant);
+    } else {
+      window.location.href = '/';
+    }
   }, []);
 
   const loadCompanyData = async () => {

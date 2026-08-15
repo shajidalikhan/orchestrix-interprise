@@ -46,6 +46,34 @@ export default function SuperadminPortal() {
   const [enableMobileSync, setEnableMobileSync] = useState(true);
   const [planStatus, setPlanStatus] = useState('BASIC');
 
+  // Verify and load active superadmin session on page mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('orchestrix_token');
+    if (savedToken) {
+      setLoading(true);
+      fetch('http://localhost:3000/auth/me', {
+        headers: { 'Authorization': `Bearer ${savedToken}` }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Session expired');
+        return res.json();
+      })
+      .then(user => {
+        if (user.role === 'SUPERADMIN') {
+          setToken(savedToken);
+          setMessage('Restored active superuser session.');
+        } else {
+          window.location.href = '/';
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('orchestrix_token');
+        localStorage.removeItem('orchestrix_tenant');
+      })
+      .finally(() => setLoading(false));
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -59,11 +87,23 @@ export default function SuperadminPortal() {
       if (!res.ok) {
         throw new Error(data.message || 'Login failed');
       }
+      
+      // Persist credentials on successful login
+      localStorage.setItem('orchestrix_token', data.accessToken);
+      localStorage.setItem('orchestrix_tenant', '');
+
       setToken(data.accessToken);
       setMessage('Successfully authenticated as Superuser!');
     } catch (err: any) {
       setLoginError(err.message);
     }
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('orchestrix_token');
+    localStorage.removeItem('orchestrix_tenant');
+    setToken('');
+    window.location.href = '/';
   };
 
   const fetchDashboardData = async () => {
@@ -161,7 +201,7 @@ export default function SuperadminPortal() {
           </div>
           {token && (
             <button
-              onClick={() => setToken('')}
+              onClick={handleSignOut}
               className="border border-slate-800 hover:border-rose-600 hover:text-rose-400 text-xs px-3 py-1.5 rounded-lg transition-all duration-200"
             >
               Sign Out

@@ -47,7 +47,11 @@ export default function ProjectsWbsPortal() {
   // Authenticate on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('orchestrix_token');
-    if (savedToken) setToken(savedToken);
+    if (savedToken) {
+      setToken(savedToken);
+    } else {
+      window.location.href = '/';
+    }
   }, []);
 
   const loadProjects = async () => {
