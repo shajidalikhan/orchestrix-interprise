@@ -16,6 +16,7 @@ import { DeveloperModule } from './developer/developer.module';
 import { BillingModule } from './billing/billing.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { SyncModule } from './sync/sync.module';
+import { SuperadminModule } from './superadmin/superadmin.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SyncModule } from './sync/sync.module';
     DeveloperModule,
     BillingModule,
     SyncModule,
+    SuperadminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

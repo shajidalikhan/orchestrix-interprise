@@ -40,6 +40,11 @@ model Tenant {
   domain              String?       @unique
   stripeCustomerId    String?       @map("stripe_customer_id")
   subscriptionStatus  String?       @map("subscription_status")
+  maxUsers            Int           @default(10) @map("max_users")
+  enableAi            Boolean       @default(true) @map("enable_ai")
+  enableVerification   Boolean       @default(true) @map("enable_verification")
+  enableIntegrations  Boolean       @default(true) @map("enable_integrations")
+  enableMobileSync    Boolean       @default(true) @map("enable_mobile_sync")
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
 
@@ -58,16 +63,16 @@ model Tenant {
 
 model User {
   id              String        @id @default(uuid())
-  tenantId        String        @map("tenant_id")
+  tenantId        String?       @map("tenant_id")
   email           String
   passwordHash    String?       @map("password_hash")
   ssoProvider     String?       @map("sso_provider")
   ssoId           String?       @map("sso_id")
-  role            String        @default("MEMBER") // ADMIN, MANAGER, MEMBER, FREELANCER
+  role            String        @default("MEMBER") // SUPERADMIN, ADMIN, MANAGER, MEMBER, FREELANCER
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant          Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   taskPermissions TaskPermission[]
   deviceTokens    DeviceToken[]
   auditLogs       AuditLog[]

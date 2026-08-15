@@ -3,8 +3,12 @@ import { SyncService } from './sync.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
+import { FeatureGateGuard } from '../tenancy/guards/feature-gate.guard';
+import { RequireFeature } from '../tenancy/decorators/require-feature.decorator';
+
 @Controller('sync')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGateGuard)
+@RequireFeature('enableMobileSync')
 export class SyncController {
   constructor(private readonly syncService: SyncService) {}
 

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenancyService } from '../tenancy/tenancy.service';
 import * as bcrypt from 'bcrypt';
@@ -51,6 +51,21 @@ export class AuthService {
     const tenantId = this.tenancyService.getTenantId();
     if (!tenantId) {
       throw new BadRequestException('Tenant context is missing');
+    }
+
+    // Check Tenant user capacity limits
+    const tenant = await (this.prisma as any).tenant.findUnique({
+      where: { id: tenantId },
+      select: { maxUsers: true },
+    });
+
+    if (tenant) {
+      const activeUsersCount = await this.prisma.user.count({
+        where: { tenantId },
+      });
+      if (activeUsersCount >= tenant.maxUsers) {
+        throw new ForbiddenException(`User seat limit reached (${tenant.maxUsers}). Please contact your system administrator to upgrade your plan.`);
+      }
     }
 
     // Check if email already registered in this tenant

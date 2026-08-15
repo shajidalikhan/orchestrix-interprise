@@ -10,7 +10,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ApiKeyAuthGuard } from './guards/api-key.guard';
 import { ApiScopes } from './decorators/api-scopes.decorator';
 
+import { FeatureGateGuard } from '../tenancy/guards/feature-gate.guard';
+import { RequireFeature } from '../tenancy/decorators/require-feature.decorator';
+
 @Controller('developer')
+@UseGuards(FeatureGateGuard)
+@RequireFeature('enableIntegrations')
 export class DeveloperController {
   constructor(
     private readonly developerService: DeveloperService,

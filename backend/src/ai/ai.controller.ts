@@ -6,8 +6,12 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
+import { FeatureGateGuard } from '../tenancy/guards/feature-gate.guard';
+import { RequireFeature } from '../tenancy/decorators/require-feature.decorator';
+
 @Controller('ai')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, FeatureGateGuard)
+@RequireFeature('enableAi')
 export class AiController {
   constructor(
     private readonly aiService: AiService,
